@@ -1,23 +1,37 @@
-````markdown
 # AnimeAnalyst
 
-Fetch anime metadata from **MyAnimeList (via Jikan v4)**, optionally enrich with **AniList**, filter locally, compute **Bayesian-weighted scores**, and plot **top-K** rankings.
+**Explore anime data with statistically robust rankings.**  
+AnimeAnalyst pulls titles from **MyAnimeList (Jikan v4)**, can cross-check **AniList**, lets you filter by time/type/genre, and plots top-K charts using a **Bayesian score** with a tunable prior (α).  
+It’s a lightweight, reproducible tool for data-minded anime fans, students, and creators.
 
-The tool ships as a small Python package with an **interactive CLI**. It caches pulls to CSV so you can iterate without hammering the APIs.
+---
 
-> **License:** MIT
+## Overview
+
+**Why this project?**  
+Public scores are noisy—small shows can look “too good,” big shows are penalized by variance.  
+AnimeAnalyst applies **Bayesian shrinkage** to stabilize rankings, exposes the **α (prior strength)**, and keeps a **CSV cache** so you can iterate without hammering APIs.
+
+**How it works (30s):**
+
+1. Fetch from Jikan (`/anime`) with server-side filters.
+2. Flatten results → **CSV cache**.
+3. *(Optional)* Pull AniList and map MAL↔AniList.
+4. Apply local filters (type/status/year/votes/genres).
+5. Compute **Bayesian score**:  \(\frac{n}{n+m}\bar{s} + \frac{m}{n+m}C\).
+6. Plot clean **horizontal bar charts**.
 
 ---
 
 ## Features
 
-- 🔎 Fetch from **Jikan v4** (`/anime`) with server-side filters: `q`, `type`, `status`, `min_score`, date range, `sfw`, pagination.
+- 🔎 Jikan v4 fetch with filters: `q`, `type`, `status`, `min_score`, date range, `sfw`, pagination.
 - 🧹 Local filters: type, status, year range, minimum voters, **genres (any/all)** by **name**.
-- 🎭 **Genre helper**: `genre_all` to list all MAL genres; `genre_any <names|ids>` accepts either names or numeric IDs.
-- 🧮 **Bayesian score** using MAL `score` + `scored_by` with a robust prior (defaults to `max(1000, median_votes)`).
-- 📊 Clean horizontal bar chart (Matplotlib) for the top-K titles.
+- 🎭 **Genre helper**: `genre_all` to list all MAL genres; `genre_any <names|ids>` accepts names **or** numeric IDs.
+- 🧮 **Bayesian score** using MAL `score` + `scored_by` with a robust prior (default `max(1000, median_votes)`).
+- 📊 Matplotlib horizontal bar charts for the top-K titles.
 - 💾 CSV cache (default `data/anime_cache.csv`) to avoid refetching.
-- 🔌 Ready hooks to merge **AniList** fields and compute a fused score.
+- 🔌 Hooks to merge **AniList** data and compute a fused score.
 
 ---
 
@@ -26,11 +40,6 @@ The tool ships as a small Python package with an **interactive CLI**. It caches 
 ```bash
 # Python 3.10+ recommended
 pip install -r requirements.txt
-````
-
-> If you use PyCharm: mark `src/` as **Sources Root**.
-
----
 
 ## Run
 
