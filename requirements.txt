@@ -1,4 +1,10 @@
-# Core deps
+# Core runtime deps
 requests>=2.31,<3
 matplotlib>=3.8,<3.10
-numpy>=1.24  # matplotlib runtime dep; list explicitly for reliability
+numpy>=1.24,<3     # matplotlib 依赖，显式注明更稳
+
+# Optional: pretty CLI tables (uncomment if you decide to use Rich)
+# rich>=13.7
+
+# For Python < 3.11, backport typing features (optional)
+# typing_extensions>=4.9; python_version<"3.11"
