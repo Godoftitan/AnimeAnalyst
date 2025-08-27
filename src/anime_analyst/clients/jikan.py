@@ -43,5 +43,8 @@ def iterate(q: str = "", type_: str = "", status: str = "", start_year: Optional
     return results
 
 def flatten(a: Dict[str, Any]) -> Dict[str, Any]:
-    # ← 用你现有的 flatten_anime 实现粘贴过来
-    ...
+    try:
+        # ... construct dict ...
+        return row
+    except Exception:
+        return {}  # return empty dict
