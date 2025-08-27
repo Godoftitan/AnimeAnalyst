@@ -45,6 +45,6 @@ def iterate(q: str = "", type_: str = "", status: str = "", start_year: Optional
 def flatten(a: Dict[str, Any]) -> Dict[str, Any]:
     try:
         # ... construct dict ...
-        return row
+        return a
     except Exception:
         return {}  # return empty dict
