@@ -1,12 +1,29 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "anime-analyst"
 version = "0.1.0"
-dependencies = ["requests>=2.31,<3", "matplotlib>=3.8,<3.10", "numpy>=1.24"]
+description = "Analyze anime from MAL (Jikan) and AniList with Bayesian scoring and plots."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+  "requests>=2.31,<3",
+  "matplotlib>=3.8,<3.10",
+  "numpy>=1.24,<3"
+]
+
+# 命令行入口：安装后可直接运行 `anime-analyst`
+[project.scripts]
+anime-analyst = "anime_analyst.cli:main"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
-packages = ["anime_analyst"]
+package-dir = { "" = "src" }
+include-package-data = true
+
+# 递归发现 src/ 下的所有 anime_analyst 子包
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["anime_analyst*"]
