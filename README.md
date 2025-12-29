@@ -5,6 +5,7 @@
 AnimeAnalyst pulls titles from **MyAnimeList (Jikan v4)**, can cross-check **AniList**, lets you filter by time/type/genre, and plots top-K charts using a **Bayesian score** with a tunable prior (α).  
 It’s a lightweight, reproducible tool for data-minded anime fans, students, and creators.
 
+
 ---
 
 ## Overview
