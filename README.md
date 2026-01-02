@@ -6,7 +6,6 @@ AnimeAnalyst pulls titles from **MyAnimeList (Jikan v4)**, can cross-check **Ani
 It’s a lightweight, reproducible tool for data-minded anime fans, students, and creators.
 
 
-
 ---
 
 ## Overview
