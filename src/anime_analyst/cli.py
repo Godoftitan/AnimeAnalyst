@@ -10,7 +10,11 @@ from anime_analyst.data.io import save_csv, load_csv
 from anime_analyst.data.genres import GenreResolver
 from anime_analyst.core.filter import filter_rows
 from anime_analyst.core.merge import merge_mal_anilist
-from anime_analyst.core.scoring import compute_bayesian_scores, compute_consensus_bayesian
+from anime_analyst.core.scoring import (
+    compute_bayesian_scores,
+    compute_consensus_bayesian,
+    compute_recommendation_scores,
+)
 from anime_analyst.core.plotting import plot_hbar_top
 
 PARAM_SPEC: Dict[str, Dict[str, Any]] = {
@@ -32,6 +36,9 @@ PARAM_SPEC: Dict[str, Dict[str, Any]] = {
     "topk": {"type": int, "default": 20},
     "use_anilist": {"type": bool, "default": False},
     "al_pop_alpha": {"type": float, "default": 0.30},
+    "recommend": {"type": bool, "default": True},
+    "pop_weight": {"type": float, "default": 0.20},
+    "recency_weight": {"type": float, "default": 0.10},
 }
 
 GENRES = GenreResolver()
@@ -113,6 +120,7 @@ def interactive_collect() -> argparse.Namespace:
 def run_pipeline(args: argparse.Namespace) -> None:
     csv_path = Path(args.csv)
     rows_ani: List[Dict[str, Any]] = []
+    rows_mal: List[Dict[str, Any]] = []
 
     if not args.no_fetch:
         print("Fetching from Jikan ...")
@@ -131,8 +139,7 @@ def run_pipeline(args: argparse.Namespace) -> None:
             rows_ani = [anilist.flatten(a) for a in ani_raw]
     else:
         print("Skip fetching. Load CSV only.")
-
-    rows_mal = load_csv(csv_path)
+        rows_mal = load_csv(csv_path)
     if not rows_mal:
         print("No rows. Exit."); return
 
@@ -147,8 +154,17 @@ def run_pipeline(args: argparse.Namespace) -> None:
         scored = compute_consensus_bayesian(merged, prior_weight=args.prior_m, alpha_pop_to_votes=args.al_pop_alpha)
         title_prefix = "Anime Consensus Ranking (MAL+AniList)"
     else:
-        scored = compute_bayesian_scores(rows_f, prior_weight=args.prior_m)
-        title_prefix = "Anime Bayesian Ranking"
+        if args.recommend:
+            scored = compute_recommendation_scores(
+                rows_f,
+                prior_weight=args.prior_m,
+                pop_weight=args.pop_weight,
+                recency_weight=args.recency_weight,
+            )
+            title_prefix = "Anime Recommendation Ranking"
+        else:
+            scored = compute_bayesian_scores(rows_f, prior_weight=args.prior_m)
+            title_prefix = "Anime Bayesian Ranking"
 
     if not scored:
         print("No scored rows to plot."); return
