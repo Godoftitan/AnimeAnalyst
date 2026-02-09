@@ -10,7 +10,11 @@ from anime_analyst.data.io import save_csv, load_csv
 from anime_analyst.data.genres import GenreResolver
 from anime_analyst.core.filter import filter_rows
 from anime_analyst.core.merge import merge_mal_anilist
-from anime_analyst.core.scoring import compute_bayesian_scores, compute_consensus_bayesian
+from anime_analyst.core.scoring import (
+    compute_bayesian_scores,
+    compute_consensus_bayesian,
+    compute_recommendation_scores,
+)
 from anime_analyst.core.plotting import plot_hbar_top
 
 PARAM_SPEC: Dict[str, Dict[str, Any]] = {
@@ -20,9 +24,12 @@ PARAM_SPEC: Dict[str, Dict[str, Any]] = {
     "year_from": {"type": int, "default": None},
     "year_to": {"type": int, "default": None},
     "min_score": {"type": float, "default": None},
+    "max_score": {"type": float, "default": None},
     "min_scored_by": {"type": int, "default": None},
     "any_genres": {"type": "list", "default": None},
     "all_genres": {"type": "list", "default": None},
+    "server_genres": {"type": "list", "default": None},
+    "server_genres_exclude": {"type": "list", "default": None},
     "limit_per_page": {"type": int, "default": 25},
     "max_pages": {"type": int, "default": 5},
     "sfw": {"type": bool, "default": False},
@@ -32,6 +39,18 @@ PARAM_SPEC: Dict[str, Dict[str, Any]] = {
     "topk": {"type": int, "default": 20},
     "use_anilist": {"type": bool, "default": False},
     "al_pop_alpha": {"type": float, "default": 0.30},
+    "recommend": {"type": bool, "default": True},
+    "pop_weight": {"type": float, "default": 0.20},
+    "recency_weight": {"type": float, "default": 0.10},
+    "order_by": {
+        "type": str,
+        "default": "score",
+        "choices": ["score", "scored_by", "members", "popularity", "favorites", "start_date", "end_date", ""],
+    },
+    "sort": {"type": str, "default": "desc", "choices": ["asc", "desc", ""]},
+    "plot_style": {"type": str, "default": "default", "choices": ["default", "ggplot", "bmh", "seaborn-v0_8"]},
+    "show_values": {"type": bool, "default": True},
+    "output": {"type": str, "default": ""},
 }
 
 GENRES = GenreResolver()
@@ -113,13 +132,19 @@ def interactive_collect() -> argparse.Namespace:
 def run_pipeline(args: argparse.Namespace) -> None:
     csv_path = Path(args.csv)
     rows_ani: List[Dict[str, Any]] = []
+    rows_mal: List[Dict[str, Any]] = []
+    server_genres = ",".join(str(i) for i in GENRES.ids_from_tokens(args.server_genres or [])) or None
+    server_genres_exclude = ",".join(str(i) for i in GENRES.ids_from_tokens(args.server_genres_exclude or [])) or None
 
     if not args.no_fetch:
         print("Fetching from Jikan ...")
         mal_raw = jikan.iterate(q=args.q, type_=args.type, status=args.status,
                                 start_year=args.year_from, end_year=args.year_to,
-                                min_score=args.min_score, limit_per_page=args.limit_per_page,
-                                max_pages=args.max_pages, sfw=args.sfw)
+                                min_score=args.min_score, max_score=args.max_score,
+                                limit_per_page=args.limit_per_page, max_pages=args.max_pages,
+                                sfw=args.sfw, order_by=args.order_by or "score",
+                                sort=args.sort or "desc", genres=server_genres,
+                                genres_exclude=server_genres_exclude)
         rows_mal = [jikan.flatten(a) for a in mal_raw]
         save_csv(rows_mal, csv_path)
 
@@ -131,8 +156,7 @@ def run_pipeline(args: argparse.Namespace) -> None:
             rows_ani = [anilist.flatten(a) for a in ani_raw]
     else:
         print("Skip fetching. Load CSV only.")
-
-    rows_mal = load_csv(csv_path)
+        rows_mal = load_csv(csv_path)
     if not rows_mal:
         print("No rows. Exit."); return
 
@@ -147,8 +171,17 @@ def run_pipeline(args: argparse.Namespace) -> None:
         scored = compute_consensus_bayesian(merged, prior_weight=args.prior_m, alpha_pop_to_votes=args.al_pop_alpha)
         title_prefix = "Anime Consensus Ranking (MAL+AniList)"
     else:
-        scored = compute_bayesian_scores(rows_f, prior_weight=args.prior_m)
-        title_prefix = "Anime Bayesian Ranking"
+        if args.recommend:
+            scored = compute_recommendation_scores(
+                rows_f,
+                prior_weight=args.prior_m,
+                pop_weight=args.pop_weight,
+                recency_weight=args.recency_weight,
+            )
+            title_prefix = "Anime Recommendation Ranking"
+        else:
+            scored = compute_bayesian_scores(rows_f, prior_weight=args.prior_m)
+            title_prefix = "Anime Bayesian Ranking"
 
     if not scored:
         print("No scored rows to plot."); return
@@ -161,9 +194,18 @@ def run_pipeline(args: argparse.Namespace) -> None:
     if args.min_score is not None: bits.append(f"min_score>={args.min_score}")
     if args.min_scored_by is not None: bits.append(f"min_votes>={args.min_scored_by}")
     if args.any_genres: bits.append("genres_any=" + "|".join(args.any_genres))
+    if args.server_genres: bits.append("genres_server=" + "|".join(args.server_genres))
+    if args.server_genres_exclude: bits.append("genres_exclude=" + "|".join(args.server_genres_exclude))
     title = title_prefix + (" - " + ", ".join(bits) if bits else "")
 
-    plot_hbar_top(scored, topk=args.topk, title=title)
+    plot_hbar_top(
+        scored,
+        topk=args.topk,
+        title=title,
+        show_values=args.show_values,
+        style=args.plot_style,
+        output_path=args.output or None,
+    )
 
 def main():
     args = interactive_collect()

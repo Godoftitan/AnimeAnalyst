@@ -15,16 +15,31 @@ def _fetch_page(params: Dict[str, Any], session: Optional[requests.Session] = No
         resp.raise_for_status()
         return resp.json()
 
-def iterate(q: str = "", type_: str = "", status: str = "", start_year: Optional[int] = None,
-            end_year: Optional[int] = None, min_score: Optional[float] = None,
-            limit_per_page: int = 25, max_pages: Optional[int] = None, sfw: bool = True
-            ) -> List[Dict[str, Any]]:
+def iterate(
+    q: str = "",
+    type_: str = "",
+    status: str = "",
+    start_year: Optional[int] = None,
+    end_year: Optional[int] = None,
+    min_score: Optional[float] = None,
+    max_score: Optional[float] = None,
+    limit_per_page: int = 25,
+    max_pages: Optional[int] = None,
+    sfw: bool = True,
+    order_by: str = "score",
+    sort: str = "desc",
+    genres: Optional[str] = None,
+    genres_exclude: Optional[str] = None,
+) -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     page, sess = 1, requests.Session()
     while True:
         params: Dict[str, Any] = {
-            "page": page, "limit": limit_per_page, "order_by": "score", "sort": "desc",
-            "sfw": str(sfw).lower()
+            "page": page,
+            "limit": limit_per_page,
+            "order_by": order_by,
+            "sort": sort,
+            "sfw": str(sfw).lower(),
         }
         if q: params["q"] = q
         if type_: params["type"] = type_.lower()
@@ -32,6 +47,9 @@ def iterate(q: str = "", type_: str = "", status: str = "", start_year: Optional
         if start_year: params["start_date"] = f"{start_year}-01-01"
         if end_year: params["end_date"] = f"{end_year}-12-31"
         if min_score is not None: params["min_score"] = min_score
+        if max_score is not None: params["max_score"] = max_score
+        if genres: params["genres"] = genres
+        if genres_exclude: params["genres_exclude"] = genres_exclude
 
         data = _fetch_page(params, session=sess)
         results.extend(data.get("data", []) or [])
